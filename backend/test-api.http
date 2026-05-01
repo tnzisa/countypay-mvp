@@ -1,0 +1,147 @@
+### CountyPay API Testing
+### Use REST Client extension in VS Code or copy to Postman
+
+@baseUrl = http://localhost:5000/api
+@token = 
+
+### ============================================
+### 1. Health Check
+### ============================================
+GET http://localhost:5000/health
+
+### ============================================
+### 2. Register New User
+### ============================================
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "phone": "254722222222",
+  "name": "Test User",
+  "password": "test123",
+  "email": "test@example.com"
+}
+
+### ============================================
+### 3. Login (Copy token from response)
+### ============================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "phone": "254712345678",
+  "password": "user123"
+}
+
+### ============================================
+### 4. Login as Admin
+### ============================================
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "phone": "254700000000",
+  "password": "admin123"
+}
+
+### ============================================
+### 5. Get Current User Profile
+### ============================================
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### ============================================
+### 6. Get All Counties
+### ============================================
+GET {{baseUrl}}/counties
+
+### ============================================
+### 7. Get Fees for Specific County
+### Replace COUNTY_ID with actual ID from step 6
+### ============================================
+GET {{baseUrl}}/counties/COUNTY_ID/fees
+
+### ============================================
+### 8. Create Payment
+### Replace FEE_ID with actual ID from step 7
+### Replace token with actual token from step 3
+### ============================================
+POST {{baseUrl}}/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "feeId": "FEE_ID_HERE",
+  "phoneNumber": "254712345678",
+  "paymentMethod": "mpesa"
+}
+
+### ============================================
+### 9. Get My Transactions
+### ============================================
+GET {{baseUrl}}/payments/my-transactions
+Authorization: Bearer {{token}}
+
+### ============================================
+### 10. Get Transaction by ID
+### Replace TRANSACTION_ID with actual ID from step 8
+### ============================================
+GET {{baseUrl}}/payments/TRANSACTION_ID
+Authorization: Bearer {{token}}
+
+### ============================================
+### 11. Get Transaction by Reference
+### Replace TRANSACTION_REF with actual ref from step 8
+### ============================================
+GET {{baseUrl}}/payments/ref/TRANSACTION_REF
+Authorization: Bearer {{token}}
+
+### ============================================
+### 12. Get Blockchain Details for Transaction
+### Replace TRANSACTION_ID with actual ID from step 8
+### ============================================
+GET {{baseUrl}}/blockchain/transaction/TRANSACTION_ID
+Authorization: Bearer {{token}}
+
+### ============================================
+### 13. Verify Transaction on Blockchain
+### Replace BLOCKCHAIN_TX_ID with actual blockchain tx ID
+### ============================================
+GET {{baseUrl}}/blockchain/verify/BLOCKCHAIN_TX_ID
+Authorization: Bearer {{token}}
+
+### ============================================
+### 14. Get Blockchain Explorer URL
+### Replace BLOCKCHAIN_TX_ID with actual blockchain tx ID
+### ============================================
+GET {{baseUrl}}/blockchain/explorer/BLOCKCHAIN_TX_ID
+
+### ============================================
+### ADMIN ENDPOINTS
+### ============================================
+
+### 15. Create New County (Admin Only)
+POST {{baseUrl}}/counties
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Machakos County",
+  "code": "MCH"
+}
+
+### 16. Create Fee for County (Admin Only)
+### Replace COUNTY_ID with actual county ID
+POST {{baseUrl}}/counties/COUNTY_ID/fees
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Water Connection Fee",
+  "description": "New water connection fee",
+  "amount": 3000
+}
+
+### 17. Get All Transactions (Admin Only)
+GET {{baseUrl}}/payments/admin/all?limit=50&offset=0
+Authorization: Bearer {{token}}
