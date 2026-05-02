@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  phone        String        @unique
+  name         String
+  email        String?
+  password     String
+  role         String        @default("citizen") // citizen, admin
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model County {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  fees      Fee[]
+  createdAt DateTime @default(now())
+}
+
+model Fee {
+  id           String        @id @default(uuid())
+  name         String
+  description  String?
+  amount       Float
+  county       County        @relation(fields: [countyId], references: [id])
+  countyId     String
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+}
+
+model Transaction {
+  id              String   @id @default(uuid())
+  amount          Float
+  status          String   @default("pending") // pending, completed, failed
+  paymentMethod   String   // mpesa, ussd, card
+  phoneNumber     String
+  transactionRef  String   @unique
+  blockchainTxId  String?  @unique
+  blockchainHash  String?
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  fee             Fee      @relation(fields: [feeId], references: [id])
+  feeId           String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
