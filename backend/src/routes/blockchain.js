@@ -2,6 +2,7 @@ const express = require('express');
 const { verifyOnBlockchain, getExplorerUrl } = require('../services/blockchain');
 const { authMiddleware } = require('../middleware/auth');
 const { prisma } = require('../lib/prisma');
+const fabricService = require('../services/fabric');
 
 const router = express.Router();
 
@@ -17,20 +18,27 @@ router.get('/verify/:txId', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Transaction ID is required' });
     }
     
-    // Verify on blockchain
-    const result = await verifyOnBlockchain(txId);
-    
-    // Add explorer URL
-    if (result.verified) {
-      result.explorerUrl = getExplorerUrl(txId);
+    // Query payment from Fabric ledger
+    try {
+      const payment = await fabricService.queryPayment(txId);
+      
+      res.json({
+        verified: true,
+        payment,
+        ledger: 'Hyperledger Fabric',
+        network: 'countypay-channel'
+      });
+    } catch (error) {
+      res.json({
+        verified: false,
+        error: error.message
+      });
     }
-    
-    res.json(result);
   } catch (error) {
     console.error('Blockchain verification error:', error);
-    res.status(500).json({ 
-      error: 'Failed to verify transaction', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to verify transaction',
+      details: error.message
     });
   }
 });

@@ -2,6 +2,7 @@ const express = require('express');
 const { prisma } = require('../lib/prisma');
 const { authMiddleware } = require('../middleware/auth');
 const { recordOnBlockchain } = require('../services/blockchain');
+const fabricService = require('../services/fabric');
 
 const router = express.Router();
 
@@ -80,6 +81,18 @@ async function processPayment(transactionId) {
   try {
     console.log(`Processing payment for transaction: ${transactionId}`);
     
+    // Get transaction details with fee and county info
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        fee: { include: { county: true } }
+      }
+    });
+    
+    if (!transaction) {
+      throw new Error('Transaction not found');
+    }
+    
     // Record on blockchain
     const blockchainResult = await recordOnBlockchain(transactionId);
     
@@ -89,9 +102,26 @@ async function processPayment(transactionId) {
       updatedAt: new Date()
     };
     
-    if (blockchainResult.success) {
-      updateData.blockchainTxId = blockchainResult.txId;
-      updateData.blockchainHash = blockchainResult.hash;
+    // Record on Fabric ledger after successful M-Pesa callback confirmation
+    try {
+      const fabricResult = await fabricService.recordPayment({
+        paymentId: transaction.id,
+        transactionRef: transaction.transactionRef,
+        amount: transaction.amount,
+        countyCode: transaction.fee.county.code,
+        feeType: transaction.fee.name,
+        phoneNumber: transaction.phoneNumber,
+        status: 'completed'
+      });
+      
+      // Update with Fabric ledger information
+      updateData.blockchainTxId = fabricResult.paymentId;
+      updateData.blockchainHash = fabricResult.timestamp;
+      
+      console.log(`Fabric ledger updated for transaction: ${transactionId}`);
+    } catch (fabricError) {
+      // Log error but don't fail the payment - M-Pesa payment already succeeded
+      console.error('Fabric ledger recording failed (payment still completed):', fabricError);
     }
     
     await prisma.transaction.update({
@@ -106,7 +136,7 @@ async function processPayment(transactionId) {
     // Mark transaction as failed
     await prisma.transaction.update({
       where: { id: transactionId },
-      data: { 
+      data: {
         status: 'failed',
         updatedAt: new Date()
       }
