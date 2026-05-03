@@ -1,68 +1,68 @@
 const express = require('express');
-const { prisma } = require('../lib/prisma');
 const { authMiddleware } = require('../middleware/auth');
-const { recordOnBlockchain } = require('../services/blockchain');
-const fabricService = require('../services/fabric');
+const { tenantMiddleware } = require('../middleware/tenantMiddleware');
+const paymentService = require('../services/paymentService');
+const { prisma } = require('../lib/prisma');
 
 const router = express.Router();
 
+// Apply tenant middleware to all routes
+router.use(authMiddleware, tenantMiddleware(authMiddleware));
+
 /**
- * Create a new payment transaction
+ * Create a new payment transaction with idempotency support
  * POST /api/payments
+ * 
+ * Body: {
+ *   feeId: string,
+ *   phoneNumber: string,
+ *   paymentMethod: 'mpesa' | 'card' | 'bank_transfer',
+ *   idempotencyKey?: string
+ * }
  */
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { feeId, phoneNumber, paymentMethod } = req.body;
+    const { feeId, phoneNumber, paymentMethod, idempotencyKey } = req.body;
     const userId = req.user.userId;
+    const organizationId = req.organizationId;
     
     // Validate input
     if (!feeId || !phoneNumber || !paymentMethod) {
       return res.status(400).json({ 
-        error: 'Fee ID, phone number, and payment method are required' 
+        code: 'MISSING_REQUIRED_FIELDS',
+        message: 'Fee ID, phone number, and payment method are required',
+        fields: ['feeId', 'phoneNumber', 'paymentMethod']
       });
     }
     
-    // Get fee details
-    const fee = await prisma.fee.findUnique({
-      where: { id: feeId },
-      include: { county: true }
-    });
-    
-    if (!fee) {
-      return res.status(404).json({ error: 'Fee not found' });
+    // Validate payment method
+    const validMethods = ['mpesa', 'card', 'bank_transfer'];
+    if (!validMethods.includes(paymentMethod)) {
+      return res.status(400).json({
+        code: 'INVALID_PAYMENT_METHOD',
+        message: `Invalid payment method. Valid options: ${validMethods.join(', ')}`
+      });
     }
     
-    // Generate unique transaction reference
-    const transactionRef = `CP${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    
-    // Create transaction record
-    const transaction = await prisma.transaction.create({
-      data: {
-        amount: fee.amount,
-        status: 'pending',
-        paymentMethod,
-        phoneNumber,
-        transactionRef,
-        userId,
-        feeId
-      },
-      include: {
-        fee: { include: { county: true } },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            phone: true
-          }
-        }
+    // Create payment with idempotency support and fraud detection
+    const transaction = await paymentService.createPayment({
+      feeId,
+      phoneNumber,
+      paymentMethod,
+      idempotencyKey,
+      userId,
+      organizationId,
+      requestContext: {
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip || req.connection.remoteAddress
       }
     });
     
-    // Simulate payment processing (in production, integrate with M-Pesa/payment gateway)
-    // For MVP, auto-complete after 2 seconds
-    setTimeout(async () => {
-      await processPayment(transaction.id);
-    }, 2000);
+    // Start async payment processing (don't wait for completion)
+    setImmediate(() => {
+      paymentService.processPayment(transaction.id)
+        .catch(error => console.error('Async payment processing failed:', error));
+    });
     
     res.status(201).json({ 
       transaction,
@@ -70,79 +70,56 @@ router.post('/', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Create payment error:', error);
-    res.status(500).json({ error: 'Failed to create payment', details: error.message });
+    res.status(500).json({ 
+      code: 'PAYMENT_CREATION_FAILED',
+      message: 'Failed to create payment',
+      error: error.message 
+    });
   }
 });
 
 /**
- * Process payment and record on blockchain (internal function)
+ * Retry a failed payment with exponential backoff
+ * POST /api/payments/:id/retry
  */
-async function processPayment(transactionId) {
+router.post('/:id/retry', authMiddleware, async (req, res) => {
   try {
-    console.log(`Processing payment for transaction: ${transactionId}`);
+    const transactionId = req.params.id;
     
-    // Get transaction details with fee and county info
+    // Verify user owns this transaction
     const transaction = await prisma.transaction.findUnique({
-      where: { id: transactionId },
-      include: {
-        fee: { include: { county: true } }
-      }
+      where: { id: transactionId }
     });
     
     if (!transaction) {
-      throw new Error('Transaction not found');
-    }
-    
-    // Record on blockchain
-    const blockchainResult = await recordOnBlockchain(transactionId);
-    
-    // Update transaction status
-    const updateData = {
-      status: blockchainResult.success ? 'completed' : 'completed', // Complete even if blockchain fails
-      updatedAt: new Date()
-    };
-    
-    // Record on Fabric ledger after successful M-Pesa callback confirmation
-    try {
-      const fabricResult = await fabricService.recordPayment({
-        paymentId: transaction.id,
-        transactionRef: transaction.transactionRef,
-        amount: transaction.amount,
-        countyCode: transaction.fee.county.code,
-        feeType: transaction.fee.name,
-        phoneNumber: transaction.phoneNumber,
-        status: 'completed'
+      return res.status(404).json({
+        code: 'TRANSACTION_NOT_FOUND',
+        message: 'Transaction not found'
       });
-      
-      // Update with Fabric ledger information
-      updateData.blockchainTxId = fabricResult.paymentId;
-      updateData.blockchainHash = fabricResult.timestamp;
-      
-      console.log(`Fabric ledger updated for transaction: ${transactionId}`);
-    } catch (fabricError) {
-      // Log error but don't fail the payment - M-Pesa payment already succeeded
-      console.error('Fabric ledger recording failed (payment still completed):', fabricError);
     }
     
-    await prisma.transaction.update({
-      where: { id: transactionId },
-      data: updateData
+    if (transaction.userId !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        message: 'Access denied'
+      });
+    }
+    
+    // Retry the payment
+    const result = await paymentService.retryPayment(transactionId);
+    
+    res.json({
+      message: 'Payment retry initiated',
+      result
     });
-    
-    console.log(`Payment processed successfully: ${transactionId}`);
   } catch (error) {
-    console.error('Payment processing failed:', error);
-    
-    // Mark transaction as failed
-    await prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: 'failed',
-        updatedAt: new Date()
-      }
+    console.error('Payment retry error:', error);
+    res.status(400).json({
+      code: 'RETRY_FAILED',
+      message: error.message
     });
   }
-}
+});
 
 /**
  * Get all transactions for the authenticated user
@@ -152,18 +129,9 @@ router.get('/my-transactions', authMiddleware, async (req, res) => {
   try {
     const { status, limit = 50 } = req.query;
     
-    const where = { userId: req.user.userId };
-    if (status) {
-      where.status = status;
-    }
-    
-    const transactions = await prisma.transaction.findMany({
-      where,
-      include: {
-        fee: { include: { county: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(limit)
+    const transactions = await paymentService.getUserTransactions(req.user.userId, {
+      limit: parseInt(limit),
+      status
     });
     
     res.json({ 
@@ -172,7 +140,11 @@ router.get('/my-transactions', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Get transactions error:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions', details: error.message });
+    res.status(500).json({ 
+      code: 'FETCH_FAILED',
+      message: 'Failed to fetch transactions',
+      error: error.message 
+    });
   }
 });
 
@@ -182,33 +154,31 @@ router.get('/my-transactions', authMiddleware, async (req, res) => {
  */
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const transaction = await prisma.transaction.findUnique({
-      where: { id: req.params.id },
-      include: {
-        fee: { include: { county: true } },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            phone: true
-          }
-        }
-      }
-    });
-    
-    if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
-    }
+    const transaction = await paymentService.getPaymentStatus(req.params.id);
     
     // Ensure user can only view their own transactions (unless admin)
     if (transaction.userId !== req.user.userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        message: 'Access denied'
+      });
     }
     
     res.json({ transaction });
   } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        code: 'TRANSACTION_NOT_FOUND',
+        message: 'Transaction not found'
+      });
+    }
+    
     console.error('Get transaction error:', error);
-    res.status(500).json({ error: 'Failed to fetch transaction', details: error.message });
+    res.status(500).json({ 
+      code: 'FETCH_FAILED',
+      message: 'Failed to fetch transaction',
+      error: error.message 
+    });
   }
 });
 
@@ -233,20 +203,32 @@ router.get('/ref/:ref', authMiddleware, async (req, res) => {
     });
     
     if (!transaction) {
-      return res.status(404).json({ error: 'Transaction not found' });
+      return res.status(404).json({
+        code: 'TRANSACTION_NOT_FOUND',
+        message: 'Transaction not found'
+      });
     }
     
     // Ensure user can only view their own transactions (unless admin)
     if (transaction.userId !== req.user.userId && req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Access denied' });
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        message: 'Access denied'
+      });
     }
     
     res.json({ transaction });
   } catch (error) {
     console.error('Get transaction by ref error:', error);
-    res.status(500).json({ error: 'Failed to fetch transaction', details: error.message });
+    res.status(500).json({ 
+      code: 'FETCH_FAILED',
+      message: 'Failed to fetch transaction',
+      error: error.message 
+    });
   }
 });
+
+module.exports = router;
 
 /**
  * Get all transactions (Admin only)

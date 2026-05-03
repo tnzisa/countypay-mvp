@@ -7,39 +7,41 @@ const fabricService = require('../services/fabric');
 const router = express.Router();
 
 /**
- * Verify a transaction on the blockchain
+ * Verify a transaction on the blockchain with cryptographic verification
  * GET /api/blockchain/verify/:txId
  */
-router.get('/verify/:txId', authMiddleware, async (req, res) => {
+router.get('/verify/:txId', authMiddleware, async (req, res, next) => {
   try {
     const { txId } = req.params;
     
     if (!txId) {
-      return res.status(400).json({ error: 'Transaction ID is required' });
+      return res.status(400).json({ 
+        code: 'MISSING_REQUIRED_FIELDS',
+        message: 'Transaction ID is required' 
+      });
     }
     
-    // Query payment from Fabric ledger
+    // Query payment from Fabric ledger with verification
     try {
       const payment = await fabricService.queryPayment(txId);
       
       res.json({
         verified: true,
         payment,
+        verificationStatus: payment.verificationStatus,
         ledger: 'Hyperledger Fabric',
-        network: 'countypay-channel'
+        network: 'countypay-channel',
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
       res.json({
         verified: false,
-        error: error.message
+        error: error.message,
+        timestamp: new Date().toISOString()
       });
     }
   } catch (error) {
-    console.error('Blockchain verification error:', error);
-    res.status(500).json({
-      error: 'Failed to verify transaction',
-      details: error.message
-    });
+    next(error);
   }
 });
 
@@ -109,6 +111,85 @@ router.get('/transaction/:transactionId', authMiddleware, async (req, res) => {
 });
 
 /**
+ * Verify batch of transactions using Merkle tree
+ * POST /api/blockchain/verify-batch
+ */
+router.post('/verify-batch', authMiddleware, async (req, res, next) => {
+  try {
+    const { paymentIds } = req.body;
+    
+    if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
+      return res.status(400).json({
+        code: 'INVALID_INPUT',
+        message: 'paymentIds must be a non-empty array'
+      });
+    }
+    
+    const batchVerification = await fabricService.verifyPaymentBatch(paymentIds);
+    
+    res.json({
+      batchVerification,
+      ledger: 'Hyperledger Fabric',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Get payment history with chain verification
+ * GET /api/blockchain/history/:paymentId
+ */
+router.get('/history/:paymentId', authMiddleware, async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    
+    const history = await fabricService.getPaymentHistory(paymentId);
+    
+    if (history.length === 0) {
+      return res.status(404).json({
+        code: 'NOT_FOUND',
+        message: 'No history found for this payment'
+      });
+    }
+    
+    res.json({
+      paymentId,
+      history,
+      chainVerified: history.every(h => h.verified),
+      ledger: 'Hyperledger Fabric'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Get ledger statistics
+ * GET /api/blockchain/stats
+ */
+router.get('/stats', authMiddleware, async (req, res, next) => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        message: 'Admin access required'
+      });
+    }
+    
+    const stats = await fabricService.getLedgerStats();
+    
+    res.json({
+      ledgerStats: stats,
+      ledger: 'Hyperledger Fabric'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * Get blockchain explorer URL for a transaction
  * GET /api/blockchain/explorer/:txId
  */
@@ -125,12 +206,11 @@ router.get('/explorer/:txId', (req, res) => {
   } catch (error) {
     console.error('Get explorer URL error:', error);
     res.status(500).json({ 
-      error: 'Failed to generate explorer URL', 
-      details: error.message 
+      code: 'EXPLORER_ERROR',
+      message: 'Failed to generate explorer URL', 
+      error: error.message 
     });
   }
 });
 
 module.exports = router;
-
-// Made with Bob

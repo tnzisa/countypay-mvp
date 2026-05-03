@@ -9,49 +9,187 @@ datasource db {
   provider = "postgresql"
 }
 
+// Multi-tenancy support - Each tenant is independent
+model Organization {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  slug          String   @unique // For URL routing
+  description   String?
+  logo          String?  // URL to logo
+  // Settings
+  status        String   @default("ACTIVE") // ACTIVE, SUSPENDED, ARCHIVED
+  tier          String   @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  maxUsers      Int      @default(10)
+  maxCounties   Int      @default(5)
+  
+  // Relations
+  users         User[]
+  counties      County[]
+  fees          Fee[]
+  transactions  Transaction[]
+  auditLogs     AuditLog[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([status])
+}
+
 model User {
-  id           String        @id @default(uuid())
-  phone        String        @unique
-  name         String
-  email        String?
-  password     String
-  role         String        @default("citizen") // citizen, admin
-  createdAt    DateTime      @default(now())
-  transactions Transaction[]
+  id              String   @id @default(uuid())
+  phone           String
+  name            String
+  email           String?
+  password        String
+  role            String   @default("citizen") // citizen, county_admin, superadmin
+  status          String   @default("ACTIVE")
+  
+  // Multi-tenancy
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  // County access (for county admins)
+  county          County?  @relation(fields: [countyId], references: [id])
+  countyId        String?
+  
+  transactions    Transaction[]
+  auditLogs       AuditLog[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([organizationId, phone])
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([role])
 }
 
 model County {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  code      String   @unique
-  fees      Fee[]
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  name            String
+  code            String
+  status          String   @default("ACTIVE")
+  
+  // Multi-tenancy
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  // County-specific settings
+  bankAccount     String?
+  contactEmail    String?
+  contactPhone    String?
+  
+  fees            Fee[]
+  transactions    Transaction[]
+  adminUsers      User[]  // County admins
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([organizationId, code])
+  @@index([organizationId])
 }
 
 model Fee {
-  id           String        @id @default(uuid())
-  name         String
-  description  String?
-  amount       Float
-  county       County        @relation(fields: [countyId], references: [id])
-  countyId     String
-  transactions Transaction[]
-  createdAt    DateTime      @default(now())
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  amount          Float
+  status          String   @default("ACTIVE")
+  
+  // Relations
+  county          County   @relation(fields: [countyId], references: [id])
+  countyId        String
+  
+  // Multi-tenancy
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  transactions    Transaction[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([organizationId, countyId, name])
+  @@index([organizationId])
+  @@index([countyId])
 }
 
 model Transaction {
-  id              String   @id @default(uuid())
+  id              String        @id @default(uuid())
   amount          Float
-  status          String   @default("pending") // pending, completed, failed
-  paymentMethod   String   // mpesa, ussd, card
+  status          String        @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
+  paymentMethod   String        // mpesa, ussd, card, bank_transfer, stripe
+  paymentProvider String        @default("mpesa") // mpesa, stripe, bank_transfer
   phoneNumber     String
-  transactionRef  String   @unique
-  blockchainTxId  String?  @unique
+  transactionRef  String        @unique
+  idempotencyKey  String?       @unique // For idempotency - prevents duplicate charges
+  blockchainTxId  String?
   blockchainHash  String?
-  user            User     @relation(fields: [userId], references: [id])
+  retryCount      Int           @default(0)
+  maxRetries      Int           @default(3)
+  lastError       String?       // Last error message for debugging
+  processedAt     DateTime?     // When payment was actually processed
+  
+  // Relations
+  user            User          @relation(fields: [userId], references: [id])
   userId          String
-  fee             Fee      @relation(fields: [feeId], references: [id])
+  fee             Fee           @relation(fields: [feeId], references: [id])
   feeId           String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  
+  // Multi-tenancy
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  auditLogs       AuditLog[]
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([idempotencyKey])
+  @@index([status])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([feeId])
 }
+
+model AuditLog {
+  id              String        @id @default(uuid())
+  // Resource being audited
+  resourceType    String        // 'TRANSACTION', 'USER', 'PAYMENT', 'ADMIN'
+  resourceId      String        // ID of the resource (transaction ID, user ID, etc)
+  // Action details
+  action          String        // 'CREATE', 'UPDATE', 'READ', 'DELETE', 'VERIFY', 'RETRY'
+  status          String        // 'SUCCESS', 'FAILURE'
+  description     String?
+  // User who performed the action
+  actor           User?         @relation(fields: [actorId], references: [id])
+  actorId         String?
+  // Change tracking
+  changes         String?       // JSON string of before/after values
+  previousValue   String?       // Previous value (for updates)
+  newValue        String?       // New value (for updates)
+  // Context
+  ipAddress       String?
+  userAgent       String?
+  requestId       String?       // Correlate with API requests
+  errorMessage    String?       // If status is FAILURE
+  // Associated transaction (if applicable)
+  transaction     Transaction?  @relation(fields: [transactionId], references: [id])
+  transactionId   String?
+  
+  // Multi-tenancy
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  organizationId  String
+  
+  createdAt       DateTime      @default(now())
+  
+  @@index([resourceType, resourceId])
+  @@index([action])
+  @@index([actorId])
+  @@index([transactionId])
+  @@index([organizationId])
+  @@index([createdAt])
+}
+
