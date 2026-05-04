@@ -199,9 +199,8 @@ Run Fraud Detection
 Create Transaction (PENDING)
     ↓
 Process with Provider Chain:
-  Try Provider 1 (M-Pesa)
-  If fails → Try Provider 2 (Stripe)
-  If fails → Try Provider 3 (Bank Transfer)
+  Try Provider 1 (Stripe)
+  If fails → Try Provider 2 (Bank Transfer)
     ↓
 Retry with Exponential Backoff
   Attempt 1: wait 1s
@@ -218,7 +217,6 @@ Audit Log + Notification
 **Configuration**:
 ```env
 # .env
-MPESA_API_KEY=xxx
 STRIPE_SECRET_KEY=xxx
 BANK_TRANSFER_KEY=xxx
 
@@ -234,7 +232,6 @@ IDEMPOTENCY_TTL=24
 
 **Key Files**:
 - `backend/src/services/paymentService.js` (175 lines)
-- `backend/src/providers/mpesaProvider.js`
 - `backend/src/providers/stripeProvider.js`
 - `backend/src/providers/bankTransferProvider.js`
 
@@ -350,7 +347,7 @@ npm run test:unit -- auditService.test.js
   "code": "PAYMENT_FAILED",
   "message": "Payment processing failed",
   "details": {
-    "provider": "mpesa",
+    "provider": "stripe",
     "retryCount": 3,
     "lastError": "Provider timeout"
   },
@@ -592,7 +589,7 @@ Update UI with sync status
   timestamp: Date.now(),
   feeId: "fee-123",
   phoneNumber: "254712345678",
-  paymentMethod: "mpesa",
+  paymentMethod: "stripe",
   idempotencyKey: "unique-key",
   status: "pending", // pending, syncing, synced, failed
   retryCount: 0,
@@ -1172,7 +1169,7 @@ describe('Payment API', () => {
       .send({
         feeId: 'fee-123',
         phoneNumber: '254712345678',
-        paymentMethod: 'mpesa'
+        paymentMethod: 'stripe'
       });
     
     expect(response.status).toBe(201);
@@ -1629,7 +1626,7 @@ Request:
 {
   "feeId": "fee-uuid",
   "phoneNumber": "254712345678",
-  "paymentMethod": "mpesa",
+  "paymentMethod": "stripe",
   "idempotencyKey": "unique-key-here"
 }
 
@@ -1639,8 +1636,8 @@ Response 201:
   "feeId": "fee-uuid",
   "amount": 1000,
   "status": "PENDING",
-  "paymentMethod": "mpesa",
-  "paymentProvider": "mpesa",
+  "paymentMethod": "stripe",
+  "paymentProvider": "stripe",
   "transactionRef": "CP1705334400abc123",
   "phoneNumber": "254712345678",
   "createdAt": "2024-01-15T10:30:00Z",
@@ -1765,9 +1762,8 @@ Response 200:
     "fraudEvents": 3
   },
   "paymentDistribution": {
-    "mpesa": 65,
-    "stripe": 25,
-    "bank_transfer": 10
+    "stripe": 70,
+    "bank_transfer": 30
   },
   "topFee": {
     "id": "fee-uuid",

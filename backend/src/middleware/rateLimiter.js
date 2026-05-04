@@ -3,23 +3,12 @@
  */
 
 const rateLimit = require('express-rate-limit');
-const RedisStore = require('rate-limit-redis');
-const redis = require('redis');
-
-const redisClient = redis.createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379
-});
 
 /**
  * Global rate limiter - per IP
  * 100 requests per 15 minutes
  */
 const globalLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:global:'
-  }),
   windowMs: 15 * 60 * 1000,     // 15 minutes
   max: 100,                       // 100 requests
   message: {
@@ -35,11 +24,6 @@ const globalLimiter = rateLimit({
  * 50 requests per 1 minute
  */
 const userLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:user:',
-    key: (req) => req.user?.id || req.ip
-  }),
   windowMs: 1 * 60 * 1000,        // 1 minute
   max: 50,                         // 50 requests
   message: {
@@ -56,11 +40,6 @@ const userLimiter = rateLimit({
  * 10 payment requests per 5 minutes
  */
 const paymentLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:payment:',
-    key: (req) => req.user?.id
-  }),
   windowMs: 5 * 60 * 1000,        // 5 minutes
   max: 10,                         // 10 payments
   message: {
@@ -77,11 +56,6 @@ const paymentLimiter = rateLimit({
  * 5 login attempts per 15 minutes
  */
 const loginLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:login:',
-    key: (req) => req.body?.phone || req.ip
-  }),
   windowMs: 15 * 60 * 1000,       // 15 minutes
   max: 5,                          // 5 attempts
   message: {
@@ -98,11 +72,6 @@ const loginLimiter = rateLimit({
  * 1000 requests per hour
  */
 const apiLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:api:',
-    key: (req) => `${req.ip}:${req.path}`
-  }),
   windowMs: 60 * 60 * 1000,       // 1 hour
   max: 1000,                       // 1000 requests
   message: {
@@ -118,11 +87,6 @@ const apiLimiter = rateLimit({
  * 10 exports per day
  */
 const exportLimiter = rateLimit({
-  store: new RedisStore({
-    client: redisClient,
-    prefix: 'rl:export:',
-    key: (req) => req.user?.id
-  }),
   windowMs: 24 * 60 * 60 * 1000,  // 24 hours
   max: 10,                         // 10 exports
   message: {

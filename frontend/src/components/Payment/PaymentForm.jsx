@@ -22,7 +22,7 @@ export const PaymentForm = ({
   const [formData, setFormData] = useState({
     feeId: '',
     phoneNumber: '',
-    paymentMethod: 'mpesa',
+    paymentMethod: 'stripe',
     confirmPhone: ''
   });
 
@@ -98,7 +98,7 @@ export const PaymentForm = ({
       setFormData({
         feeId: '',
         phoneNumber: '',
-        paymentMethod: 'mpesa',
+        paymentMethod: 'stripe',
         confirmPhone: ''
       });
 
@@ -165,7 +165,6 @@ export const PaymentForm = ({
             name="paymentMethod"
             error={errors.paymentMethod}
             options={[
-              { value: 'mpesa', label: '📱 M-Pesa' },
               { value: 'stripe', label: '💳 Credit/Debit Card' },
               { value: 'bank_transfer', label: '🏦 Bank Transfer' }
             ]}

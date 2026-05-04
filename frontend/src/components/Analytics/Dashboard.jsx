@@ -401,11 +401,10 @@ export const AnalyticsDashboard = ({ data, loading = false }) => {
         <PieChart
           title="Payment Methods"
           data={[
-            data?.paymentDistribution?.mpesa || 0,
             data?.paymentDistribution?.stripe || 0,
             data?.paymentDistribution?.bank_transfer || 0
           ]}
-          labels={['M-Pesa', 'Stripe', 'Bank Transfer']}
+          labels={['Stripe', 'Bank Transfer']}
           loading={loading}
         />
 

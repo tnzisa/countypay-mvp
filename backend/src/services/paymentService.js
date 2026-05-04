@@ -1,7 +1,7 @@
 /**
  * Payment Service - Handles payment processing with resilience
  * Features:
- * - Multiple payment providers (M-Pesa, Stripe, Bank Transfer)
+ * - Multiple payment providers (Stripe, Bank Transfer)
  * - Automatic retry with exponential backoff
  * - Idempotency key support to prevent duplicate charges
  * - Payment state machine (PENDING → PROCESSING → COMPLETED/FAILED)
@@ -27,13 +27,12 @@ const PAYMENT_STATUS = {
 
 // Payment provider implementations
 const PROVIDERS = {
-  mpesa: require('../providers/mpesaProvider'),
   stripe: require('../providers/stripeProvider'),
   bank_transfer: require('../providers/bankTransferProvider')
 };
 
 // Default provider fallback chain
-const PROVIDER_FALLBACK_CHAIN = ['mpesa', 'stripe', 'bank_transfer'];
+const PROVIDER_FALLBACK_CHAIN = ['stripe', 'bank_transfer'];
 
 /**
  * Create a new payment transaction with idempotency support
@@ -101,14 +100,14 @@ async function createPayment({ feeId, phoneNumber, paymentMethod, idempotencyKey
     const transactionRef = `CP${Date.now()}${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Determine payment provider
-    const provider = paymentMethod || 'mpesa';
+    const provider = paymentMethod || 'stripe';
 
     // Create transaction in PENDING state
     const transaction = await prisma.transaction.create({
       data: {
         amount: fee.amount,
         status: PAYMENT_STATUS.PENDING,
-        paymentMethod: paymentMethod || 'mpesa',
+        paymentMethod: paymentMethod || 'stripe',
         paymentProvider: provider,
         phoneNumber,
         transactionRef,

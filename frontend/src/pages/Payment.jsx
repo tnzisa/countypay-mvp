@@ -4,18 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 
 const PAYMENT_METHODS = [
-  { id: 'mpesa', label: 'M-Pesa', icon: '📱', desc: 'STK push to your phone' },
-  { id: 'ussd',  label: 'USSD',  icon: '📞', desc: 'Dial *XXX# to pay' },
-  { id: 'card',  label: 'Card',  icon: '💳', desc: 'Visa or Mastercard' },
+  { id: 'stripe', label: 'Card', icon: '💳', desc: 'Visa or Mastercard' },
+  { id: 'bank_transfer', label: 'Bank transfer', icon: '🏦', desc: 'Transfer from your bank' }
 ];
 
 const MethodIcon = ({ id, className = 'w-5 h-5' }) => {
-  if (id === 'mpesa') return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-  );
-  if (id === 'ussd') return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-  );
+  if (id === 'bank_transfer') {
+    return (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M5 10V7l7-4 7 4v3M4 10v10h16V10M8 14h8"/></svg>
+    );
+  }
+
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
   );
@@ -75,73 +74,12 @@ function CardForm({ onSubmit, loading, amount }) {
   );
 }
 
-// ── USSD dialog ──────────────────────────────────────────────────────────────
-function UssdDialog({ county, fee, phone, onConfirm, loading }) {
-  const ussdCode = `*640*${county?.code || '000'}#`;
-  const [step, setStep] = useState(1);
-  const [pin,  setPin]  = useState('');
-
-  if (step === 1) return (
-    <div className="bg-white rounded-2xl ring-1 ring-amber-200 p-6 mb-4 text-center">
-      <div className="mx-auto w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-4">
-        <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-      </div>
-      <h2 className="text-sm font-semibold text-slate-900 mb-1">Dial this USSD code</h2>
-      <p className="text-xs text-slate-500 mb-3">then select the option for <strong>{fee?.name}</strong></p>
-      <div className="bg-amber-50 border border-amber-200 rounded-xl py-4 px-6 mb-4 inline-block w-full">
-        <p className="font-mono text-2xl font-bold text-amber-700 tracking-widest">{ussdCode}</p>
-      </div>
-      <p className="text-xs text-slate-400 mb-4">Amount: KES {fee?.amount?.toLocaleString()} · {phone}</p>
-      <button onClick={() => setStep(2)}
-        className="w-full py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 transition-all text-sm">
-        I've selected the option →
-      </button>
-    </div>
-  );
-
-  return (
-    <div className="bg-white rounded-2xl ring-1 ring-amber-200 p-6 mb-4 text-center">
-      <h2 className="text-sm font-semibold text-slate-900 mb-1">Enter your USSD PIN</h2>
-      <p className="text-xs text-slate-500 mb-4">Confirm payment of KES {fee?.amount?.toLocaleString()}</p>
-
-      {/* PIN display */}
-      <div className="flex justify-center gap-3 mb-5">
-        {[0,1,2,3].map(i => (
-          <div key={i} className={`w-11 h-11 rounded-xl border-2 flex items-center justify-center text-lg transition-all ${pin[i] ? 'border-amber-400 bg-amber-50' : 'border-slate-200'}`}>
-            {pin[i] ? '●' : ''}
-          </div>
-        ))}
-      </div>
-
-      {/* PIN pad */}
-      <div className="grid grid-cols-3 gap-2 max-w-[200px] mx-auto mb-4">
-        {[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map((k, i) => (
-          <button key={i} disabled={k === ''}
-            onClick={() => {
-              if (k === '⌫') setPin(p => p.slice(0,-1));
-              else if (pin.length < 4) setPin(p => p + k);
-            }}
-            className={`h-11 rounded-xl text-sm font-semibold transition-all ${
-              k === '' ? 'invisible' : 'bg-slate-100 hover:bg-amber-100 active:bg-amber-200 text-slate-800'
-            }`}>
-            {k}
-          </button>
-        ))}
-      </div>
-
-      <button onClick={onConfirm} disabled={loading || pin.length < 4}
-        className="w-full py-3 rounded-xl bg-amber-500 text-white font-semibold hover:bg-amber-600 disabled:opacity-60 transition-all text-sm">
-        {loading ? 'Processing…' : 'Confirm payment'}
-      </button>
-    </div>
-  );
-}
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function Payment() {
   const [county, setCounty] = useState(null);
   const [selectedFee, setSelectedFee] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('mpesa');
+  const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -182,7 +120,7 @@ export default function Payment() {
     }, 3000);
   };
 
-  // Core submit — used by all three methods
+  // Core submit — used by all methods
   const handleSubmit = async () => {
     if (!selectedFee) return setError('Please select a fee.');
     if (!phone) return setError('Please enter your phone number.');
@@ -223,6 +161,8 @@ export default function Payment() {
     handleSubmit();
   };
 
+  const selectedMethod = PAYMENT_METHODS.find((method) => method.id === paymentMethod);
+
   const reset = () => {
     clearInterval(pollRef.current);
     setTransaction(null);
@@ -249,9 +189,7 @@ export default function Payment() {
               </div>
               <h2 className="text-xl font-semibold text-slate-900 mb-1.5">Payment in progress</h2>
               <p className="text-sm text-slate-500 mb-5 max-w-sm mx-auto">
-                {paymentMethod === 'mpesa'
-                  ? 'Check your phone for the M-Pesa STK push and enter your PIN to confirm.'
-                  : 'Waiting for payment confirmation…'}
+                Waiting for payment confirmation…
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full">
                 <span className="relative flex h-2 w-2">
@@ -392,7 +330,7 @@ export default function Payment() {
         {/* Payment method */}
         <div className="bg-white rounded-2xl ring-1 ring-slate-200/70 p-6 mb-4">
           <h2 className="text-sm font-semibold text-slate-900 mb-4">Payment method</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {PAYMENT_METHODS.map(m => {
               const active = paymentMethod === m.id;
               return (
@@ -422,18 +360,21 @@ export default function Payment() {
         </div>
 
         {/* ── Method-specific UI ── */}
-        {paymentMethod === 'card' && (
+        {paymentMethod === 'stripe' && (
           <CardForm onSubmit={handleCardSubmit} loading={loading} amount={selectedFee?.amount} />
         )}
 
-        {paymentMethod === 'ussd' && (
-          <UssdDialog
-            county={county}
-            fee={selectedFee}
-            phone={`+254${phone}`}
-            onConfirm={handleSubmit}
-            loading={loading}
-          />
+        {paymentMethod === 'bank_transfer' && (
+          <div className="bg-white rounded-2xl ring-1 ring-slate-200/70 p-6 mb-4">
+            <h2 className="text-sm font-semibold text-slate-900 mb-2">Bank transfer details</h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Transfer from your bank, then confirm to record the payment.
+            </p>
+            <button onClick={handleSubmit} disabled={loading}
+              className="w-full py-3 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed transition-all text-sm">
+              {loading ? 'Processing…' : `Confirm transfer for KES ${selectedFee?.amount?.toLocaleString() || ''}`}
+            </button>
+          </div>
         )}
 
         {/* Summary */}
@@ -446,7 +387,7 @@ export default function Payment() {
             </div>
             <div className="flex justify-between text-sm mb-4">
               <span className="text-slate-400">Method</span>
-              <span className="font-medium capitalize">{paymentMethod}</span>
+              <span className="font-medium">{selectedMethod?.label || paymentMethod}</span>
             </div>
             <div className="flex justify-between font-bold text-lg border-t border-slate-700 pt-4">
               <span>Total</span>
@@ -459,13 +400,6 @@ export default function Payment() {
           <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>
         )}
 
-        {/* M-Pesa pay button — Card and USSD have their own */}
-        {paymentMethod === 'mpesa' && (
-          <button onClick={handleSubmit} disabled={loading}
-            className="w-full py-4 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/20 transition-all">
-            {loading ? 'Processing…' : `Pay KES ${selectedFee?.amount?.toLocaleString() || ''}`}
-          </button>
-        )}
 
         <p className="text-xs text-slate-400 text-center mt-4 inline-flex items-center gap-1.5 w-full justify-center">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>

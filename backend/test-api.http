@@ -73,7 +73,7 @@ Content-Type: application/json
 {
   "feeId": "FEE_ID_HERE",
   "phoneNumber": "254712345678",
-  "paymentMethod": "mpesa"
+  "paymentMethod": "stripe"
 }
 
 ### ============================================

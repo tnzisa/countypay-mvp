@@ -55,7 +55,7 @@ async function resolveTenant(req) {
 /**
  * Tenant middleware - Ensures user belongs to organization
  */
-function tenantMiddleware(req, res, next) {
+function tenantMiddleware(authCheck = true) {
   return async (req, res, next) => {
     try {
       const organizationId = await resolveTenant(req);
@@ -67,8 +67,8 @@ function tenantMiddleware(req, res, next) {
         });
       }
 
-      // Verify user belongs to organization
-      if (req.user?.organizationId && req.user.organizationId !== organizationId) {
+      // Verify user belongs to organization (unless explicitly skipped)
+      if (authCheck && req.user?.organizationId && req.user.organizationId !== organizationId) {
         return res.status(403).json({
           code: 'ORGANIZATION_MISMATCH',
           message: 'Access denied: You do not belong to this organization'

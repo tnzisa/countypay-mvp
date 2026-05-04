@@ -1,269 +1,235 @@
-import React from 'react';
-import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react';
-
 /**
- * Professional Button Component
- * Supports multiple variants, sizes, and states
+ * CountyPay UI Component Library
+ * Built with Tailwind CSS for consistency and simplicity
+ * All components support accessibility and responsive design
  */
-export const Button = ({
-  children,
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
-  loading = false,
-  fullWidth = false,
+
+import React from 'react';
+import { AlertCircle, CheckCircle, Info, X } from 'lucide-react';
+
+// ============================================================================
+// BUTTON COMPONENT
+// ============================================================================
+export const Button = ({ 
+  children, 
+  variant = 'primary', 
+  size = 'md', 
+  disabled = false, 
+  isLoading = false, 
   onClick,
-  type = 'button',
   className = '',
-  ...props
+  ...props 
 }) => {
-  const baseClasses =
-    'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2';
-
+  const baseStyles = 'font-semibold rounded-lg transition-colors duration-200 inline-flex items-center justify-center gap-2';
+  
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary:
-      'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-400',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    warning:
-      'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500',
-    outline:
-      'border-2 border-gray-300 text-gray-900 hover:bg-gray-50 focus:ring-gray-300',
-    ghost:
-      'text-gray-700 hover:bg-gray-100 focus:ring-gray-300'
+    primary: 'bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-300',
+    secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 disabled:bg-slate-50',
+    danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300',
+    outline: 'border border-slate-300 text-slate-900 hover:bg-slate-50 disabled:opacity-50',
+    ghost: 'text-slate-600 hover:bg-slate-100 disabled:opacity-50'
   };
-
+  
   const sizes = {
     sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
-    xl: 'px-8 py-4 text-xl'
+    md: 'px-4 py-2.5 text-base',
+    lg: 'px-6 py-3 text-lg'
   };
-
+  
   return (
     <button
-      type={type}
-      disabled={disabled || loading}
       onClick={onClick}
-      className={`
-        ${baseClasses}
-        ${variants[variant]}
-        ${sizes[size]}
-        ${fullWidth ? 'w-full' : ''}
-        ${(disabled || loading) ? 'opacity-50 cursor-not-allowed' : ''}
-        ${className}
-      `}
+      disabled={disabled || isLoading}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${disabled || isLoading ? 'cursor-not-allowed' : 'cursor-pointer'} ${className}`}
       {...props}
     >
-      {loading && (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-      )}
+      {isLoading && <Spinner size="sm" />}
       {children}
     </button>
   );
 };
 
-/**
- * Professional Input Component
- * Supports text, email, password, number inputs
- */
+// ============================================================================
+// INPUT COMPONENT
+// ============================================================================
 export const Input = ({
   label,
-  type = 'text',
   placeholder,
+  type = 'text',
   value,
   onChange,
   error,
-  required,
   disabled = false,
-  icon: Icon,
+  required = false,
+  className = '',
   ...props
 }) => {
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="relative">
-        {Icon && (
-          <div className="absolute left-3 top-3 text-gray-400">
-            <Icon size={18} />
-          </div>
-        )}
-        <input
-          type={type}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={`
-            w-full px-4 py-2 ${Icon ? 'pl-10' : ''} rounded-lg border-2
-            transition-colors focus:outline-none
-            ${
-              error
-                ? 'border-red-500 focus:border-red-600 bg-red-50'
-                : 'border-gray-300 focus:border-blue-500'
-            }
-            ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}
-          `}
-          {...props}
-        />
-      </div>
-      {error && (
-        <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-          <AlertCircle size={14} />
-          {error}
-        </p>
-      )}
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors duration-200 ${
+          error 
+            ? 'border-red-300 bg-red-50 text-slate-900 placeholder-red-300' 
+            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+        {...props}
+      />
+      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
     </div>
   );
 };
 
-/**
- * Professional Card Component
- * Container for content with optional title and footer
- */
-export const Card = ({
-  children,
-  title,
-  subtitle,
-  footer,
+// ============================================================================
+// SELECT COMPONENT
+// ============================================================================
+export const Select = ({
+  label,
+  value,
+  onChange,
+  options = [],
+  placeholder,
+  error,
+  disabled = false,
+  required = false,
   className = '',
-  onClick,
-  hover = true
+  ...props
 }) => {
   return (
+    <div className="w-full">
+      {label && (
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+      )}
+      <select
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors duration-200 appearance-none bg-white ${
+          error
+            ? 'border-red-300 bg-red-50 text-slate-900'
+            : 'border-slate-300 text-slate-900 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+        {...props}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
+    </div>
+  );
+};
+
+// ============================================================================
+// CARD COMPONENT
+// ============================================================================
+export const Card = ({ children, title, subtitle, className = '', ...props }) => {
+  return (
     <div
-      onClick={onClick}
-      className={`
-        bg-white rounded-lg border border-gray-200 overflow-hidden
-        ${hover ? 'hover:shadow-lg transition-shadow cursor-pointer' : 'shadow-md'}
-        ${className}
-      `}
+      className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden ${className}`}
+      {...props}
     >
-      {title && (
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          {subtitle && <p className="text-sm text-gray-600 mt-1">{subtitle}</p>}
+      {(title || subtitle) && (
+        <div className="px-6 py-4 border-b border-slate-200">
+          {title && <h2 className="text-lg font-semibold text-slate-900">{title}</h2>}
+          {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
         </div>
       )}
       <div className="px-6 py-4">{children}</div>
-      {footer && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          {footer}
-        </div>
-      )}
     </div>
   );
 };
 
-/**
- * Professional Badge Component
- * Status indicators with multiple variants
- */
-export const Badge = ({
-  children,
-  variant = 'default',
-  size = 'md',
-  className = ''
-}) => {
+// ============================================================================
+// BADGE COMPONENT
+// ============================================================================
+export const Badge = ({ children, variant = 'default', className = '', ...props }) => {
   const variants = {
-    default: 'bg-gray-200 text-gray-900',
-    primary: 'bg-blue-100 text-blue-900',
-    success: 'bg-green-100 text-green-900',
-    warning: 'bg-yellow-100 text-yellow-900',
-    danger: 'bg-red-100 text-red-900',
-    info: 'bg-indigo-100 text-indigo-900'
-  };
-
-  const sizes = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-1.5 text-sm',
-    lg: 'px-4 py-2 text-base'
+    default: 'bg-slate-100 text-slate-800',
+    success: 'bg-emerald-100 text-emerald-800',
+    warning: 'bg-amber-100 text-amber-800',
+    danger: 'bg-red-100 text-red-800',
+    info: 'bg-blue-100 text-blue-800'
   };
 
   return (
     <span
-      className={`
-        inline-block rounded-full font-medium
-        ${variants[variant]}
-        ${sizes[size]}
-        ${className}
-      `}
+      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
+      {...props}
     >
       {children}
     </span>
   );
 };
 
-/**
- * Professional Alert Component
- * Displays messages with icons
- */
-export const Alert = ({ type = 'info', title, message, onClose }) => {
-  const config = {
-    info: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: Info,
-      iconColor: 'text-blue-600'
-    },
-    success: {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      icon: CheckCircle,
-      iconColor: 'text-green-600'
-    },
-    warning: {
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-200',
-      icon: AlertCircle,
-      iconColor: 'text-yellow-600'
-    },
-    error: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      icon: XCircle,
-      iconColor: 'text-red-600'
-    }
+// ============================================================================
+// ALERT COMPONENT
+// ============================================================================
+export const Alert = ({ 
+  children, 
+  variant = 'info', 
+  title, 
+  onDismiss,
+  className = '',
+  ...props 
+}) => {
+  const variants = {
+    info: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: Info },
+    success: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', icon: CheckCircle },
+    warning: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', icon: AlertCircle },
+    danger: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-800', icon: AlertCircle }
   };
 
-  const { bg, border, icon: Icon, iconColor } = config[type];
+  const config = variants[variant];
+  const Icon = config.icon;
 
   return (
-    <div className={`${bg} border ${border} rounded-lg p-4 flex gap-4`}>
-      <Icon className={`${iconColor} flex-shrink-0 mt-0.5`} size={20} />
+    <div
+      className={`${config.bg} border ${config.border} rounded-lg p-4 flex gap-3 ${className}`}
+      {...props}
+    >
+      <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${config.text}`} />
       <div className="flex-1">
-        {title && <h4 className="font-semibold text-gray-900">{title}</h4>}
-        {message && <p className="text-sm text-gray-700 mt-1">{message}</p>}
+        {title && <h3 className={`font-semibold text-sm ${config.text}`}>{title}</h3>}
+        <div className={`text-sm ${config.text}`}>{children}</div>
       </div>
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 flex-shrink-0"
-        >
-          <XCircle size={20} />
+      {onDismiss && (
+        <button onClick={onDismiss} className={`flex-shrink-0 ${config.text} hover:opacity-75`}>
+          <X className="w-5 h-5" />
         </button>
       )}
     </div>
   );
 };
 
-/**
- * Professional Modal Component
- * Dialog for important actions
- */
+// ============================================================================
+// MODAL COMPONENT
+// ============================================================================
 export const Modal = ({
   isOpen,
-  onClose,
   title,
   children,
-  footer,
-  size = 'md'
+  actions,
+  onClose,
+  size = 'md',
+  className = '',
+  ...props
 }) => {
   if (!isOpen) return null;
 
@@ -275,166 +241,211 @@ export const Modal = ({
   };
 
   return (
-    <>
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      onClick={onClose}
+      {...props}
+    >
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
-        onClick={onClose}
-      />
+        className={`bg-white rounded-xl shadow-lg ${sizes[size]} w-full mx-4 ${className}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+            <button
+              onClick={onClose}
+              className="text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          className={`bg-white rounded-lg shadow-2xl overflow-hidden ${sizes[size]} w-full`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          {title && (
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <XCircle size={24} />
-              </button>
-            </div>
-          )}
+        <div className="px-6 py-4">{children}</div>
 
-          {/* Body */}
-          <div className="px-6 py-4">{children}</div>
-
-          {/* Footer */}
-          {footer && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
-              {footer}
-            </div>
-          )}
-        </div>
+        {actions && (
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+            {actions}
+          </div>
+        )}
       </div>
-    </>
-  );
-};
-
-/**
- * Professional Spinner Component
- * Loading indicator
- */
-export const Spinner = ({ size = 'md', color = 'blue' }) => {
-  const sizes = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12'
-  };
-
-  const colors = {
-    blue: 'border-blue-500',
-    green: 'border-green-500',
-    red: 'border-red-500',
-    gray: 'border-gray-500'
-  };
-
-  return (
-    <div className="flex justify-center items-center">
-      <div
-        className={`
-          ${sizes[size]}
-          border-4 border-gray-200
-          border-t-${color}-500
-          rounded-full
-          animate-spin
-        `}
-      />
     </div>
   );
 };
 
-/**
- * Professional Select/Dropdown Component
- */
-export const Select = ({
+// ============================================================================
+// SPINNER COMPONENT
+// ============================================================================
+export const Spinner = ({ size = 'md', className = '' }) => {
+  const sizes = {
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8'
+  };
+
+  return (
+    <div className={`${sizes[size]} ${className}`}>
+      <svg
+        className="animate-spin h-full w-full text-emerald-600"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        />
+      </svg>
+    </div>
+  );
+};
+
+// ============================================================================
+// TABLE COMPONENT
+// ============================================================================
+export const Table = ({ 
+  headers = [], 
+  rows = [], 
+  loading = false,
+  className = '',
+  ...props 
+}) => {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <Spinner />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`overflow-x-auto rounded-lg border border-slate-200 ${className}`} {...props}>
+      <table className="w-full">
+        <thead className="bg-slate-50 border-b border-slate-200">
+          <tr>
+            {headers.map((header, i) => (
+              <th key={i} className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={headers.length} className="px-6 py-8 text-center text-sm text-slate-500">
+                No data available
+              </td>
+            </tr>
+          ) : (
+            rows.map((row, i) => (
+              <tr key={i} className="border-b border-slate-200 hover:bg-slate-50 transition-colors">
+                {row.map((cell, j) => (
+                  <td key={j} className="px-6 py-3 text-sm text-slate-900">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// ============================================================================
+// TEXTAREA COMPONENT
+// ============================================================================
+export const Textarea = ({
   label,
-  options,
+  placeholder,
   value,
   onChange,
   error,
-  required,
-  placeholder = 'Select an option',
-  disabled = false
+  disabled = false,
+  rows = 4,
+  className = '',
+  ...props
 }) => {
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <select
+      <textarea
+        placeholder={placeholder}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`
-          w-full px-4 py-2 rounded-lg border-2
-          transition-colors focus:outline-none
-          ${
-            error
-              ? 'border-red-500 focus:border-red-600 bg-red-50'
-              : 'border-gray-300 focus:border-blue-500'
-          }
-          ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}
-        `}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option
-            key={option.value}
-            value={option.value}
-          >
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
-          <AlertCircle size={14} />
-          {error}
-        </p>
-      )}
+        rows={rows}
+        className={`w-full px-4 py-2.5 border rounded-lg text-sm transition-colors duration-200 font-mono resize-vertical ${
+          error
+            ? 'border-red-300 bg-red-50 text-slate-900'
+            : 'border-slate-300 bg-white text-slate-900 placeholder-slate-400 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+        {...props}
+      />
+      {error && <p className="text-red-600 text-xs mt-1">{error}</p>}
     </div>
   );
 };
 
-/**
- * Professional Toggle/Switch Component
- */
-export const Toggle = ({
+// ============================================================================
+// CHECKBOX COMPONENT
+// ============================================================================
+export const Checkbox = ({
   label,
   checked,
   onChange,
-  disabled = false
+  disabled = false,
+  className = '',
+  ...props
 }) => {
   return (
-    <div className="flex items-center gap-3">
-      <button
-        onClick={() => !disabled && onChange(!checked)}
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
         disabled={disabled}
-        className={`
-          relative inline-flex h-6 w-11 rounded-full
-          transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-          ${checked ? 'bg-blue-600' : 'bg-gray-300'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-      >
-        <span
-          className={`
-            inline-block h-5 w-5 rounded-full bg-white shadow-lg
-            transition-transform mt-0.5
-            ${checked ? 'translate-x-5' : 'translate-x-0.5'}
-          `}
-        />
-      </button>
-      {label && <label className="text-sm text-gray-700">{label}</label>}
-    </div>
+        className={`w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 ${
+          disabled ? 'cursor-not-allowed opacity-50' : ''
+        } ${className}`}
+        {...props}
+      />
+      {label && <span className="text-sm text-slate-700">{label}</span>}
+    </label>
   );
 };
+
+// ============================================================================
+// DIVIDER COMPONENT
+// ============================================================================
+export const Divider = ({ label, className = '', ...props }) => {
+  if (label) {
+    return (
+      <div className={`flex items-center gap-3 my-4 ${className}`} {...props}>
+        <div className="flex-1 border-t border-slate-200" />
+        <span className="text-xs font-medium text-slate-500">{label}</span>
+        <div className="flex-1 border-t border-slate-200" />
+      </div>
+    );
+  }
+  return <div className={`border-t border-slate-200 my-4 ${className}`} {...props} />;
+};
+
+// ============================================================================
+// SKELETON LOADER
+// ============================================================================
+export const Skeleton = ({ width = 'w-full', height = 'h-4', className = '', ...props }) => (
+  <div
+    className={`${width} ${height} bg-slate-200 rounded animate-pulse ${className}`}
+    {...props}
+  />
+);

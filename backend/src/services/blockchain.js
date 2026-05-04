@@ -5,13 +5,16 @@ const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.or
 const networkPassphrase = StellarSdk.Networks.TESTNET;
 
 // IMPORTANT: Generate your own keypair for production!
-// For MVP testing, you can use this testnet keypair or generate a new one
 // To generate: const keypair = StellarSdk.Keypair.random();
 // console.log('Public Key:', keypair.publicKey());
 // console.log('Secret Key:', keypair.secret());
+// Store the secret in .env as STELLAR_SECRET
 
-// Example testnet keypair (fund it at https://laboratory.stellar.org/#account-creator?network=test)
-const SOURCE_SECRET = process.env.STELLAR_SECRET || 'SCZANGBA5YHTNYVVV4C3U252E2B6P6F5T3U6MM63WBSBZATAQI3EBTQ4';
+const SOURCE_SECRET = process.env.STELLAR_SECRET;
+
+if (!SOURCE_SECRET) {
+  console.warn('WARNING: STELLAR_SECRET not set in environment. Blockchain recording disabled.');
+}
 
 let sourceKeypair;
 try {

@@ -130,7 +130,7 @@ $counties = Invoke-RestMethod -Uri "http://localhost:5000/api/counties"
 $feeId = $counties[0].fees[0].id
 
 # Create a payment
-$payment = Invoke-RestMethod -Uri "http://localhost:5000/api/payments" -Method POST -Headers @{Authorization="Bearer $token"} -ContentType "application/json" -Body "{`"feeId`":`"$feeId`",`"phoneNumber`":`"254712345678`",`"paymentMethod`":`"mpesa`"}"
+$payment = Invoke-RestMethod -Uri "http://localhost:5000/api/payments" -Method POST -Headers @{Authorization="Bearer $token"} -ContentType "application/json" -Body "{`"feeId`":`"$feeId`",`"phoneNumber`":`"254712345678`",`"paymentMethod`":`"stripe`"}"
 
 # Wait 2 seconds for processing
 Start-Sleep -Seconds 2

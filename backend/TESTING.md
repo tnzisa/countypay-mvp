@@ -162,7 +162,7 @@ describe('POST /api/payments', () => {
       .send({
         feeId: 'fee-123',
         phoneNumber: '254712345678',
-        paymentMethod: 'mpesa'
+        paymentMethod: 'stripe'
       });
 
     expect(response.status).toBe(201);

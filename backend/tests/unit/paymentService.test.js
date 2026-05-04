@@ -34,7 +34,7 @@ describe('Payment Service', () => {
       const result = await paymentService.createPayment({
         feeId: 'fee-123',
         phoneNumber: '254712345678',
-        paymentMethod: 'mpesa',
+        paymentMethod: 'stripe',
         userId: 'user-123',
         organizationId: 'org-123'
       });
@@ -52,7 +52,7 @@ describe('Payment Service', () => {
       const result = await paymentService.createPayment({
         feeId: 'fee-123',
         phoneNumber: '254712345678',
-        paymentMethod: 'mpesa',
+        paymentMethod: 'stripe',
         idempotencyKey: 'idem-123',
         userId: 'user-123',
         organizationId: 'org-123'
@@ -72,7 +72,7 @@ describe('Payment Service', () => {
         paymentService.createPayment({
           feeId: 'invalid-fee',
           phoneNumber: '254712345678',
-          paymentMethod: 'mpesa',
+          paymentMethod: 'stripe',
           userId: 'user-123',
           organizationId: 'org-123'
         })
@@ -96,7 +96,7 @@ describe('Payment Service', () => {
         paymentService.createPayment({
           feeId: 'fee-123',
           phoneNumber: '254712345678',
-          paymentMethod: 'mpesa',
+          paymentMethod: 'stripe',
           userId: 'user-123',
           organizationId: 'org-123'
         })

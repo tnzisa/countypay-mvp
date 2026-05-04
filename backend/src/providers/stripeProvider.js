@@ -3,7 +3,8 @@
  * Handles card payments via Stripe
  */
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_123');
+// Note: Stripe SDK is loaded lazily to avoid env var issues at module load time
+// For MVP, payment processing is simulated
 
 /**
  * Process Stripe payment

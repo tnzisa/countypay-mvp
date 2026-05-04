@@ -120,8 +120,8 @@ model Transaction {
   id              String        @id @default(uuid())
   amount          Float
   status          String        @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
-  paymentMethod   String        // mpesa, ussd, card, bank_transfer, stripe
-  paymentProvider String        @default("mpesa") // mpesa, stripe, bank_transfer
+  paymentMethod   String        // card, bank_transfer, stripe
+  paymentProvider String        @default("stripe") // stripe, bank_transfer
   phoneNumber     String
   transactionRef  String        @unique
   idempotencyKey  String?       @unique // For idempotency - prevents duplicate charges
@@ -137,6 +137,8 @@ model Transaction {
   userId          String
   fee             Fee           @relation(fields: [feeId], references: [id])
   feeId           String
+  county          County        @relation(fields: [countyId], references: [id])
+  countyId        String
   
   // Multi-tenancy
   organization    Organization @relation(fields: [organizationId], references: [id])
@@ -151,6 +153,7 @@ model Transaction {
   @@index([status])
   @@index([userId])
   @@index([organizationId])
+  @@index([countyId])
   @@index([feeId])
 }
 

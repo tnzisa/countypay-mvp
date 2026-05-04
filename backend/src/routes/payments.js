@@ -16,7 +16,7 @@ router.use(authMiddleware, tenantMiddleware(authMiddleware));
  * Body: {
  *   feeId: string,
  *   phoneNumber: string,
- *   paymentMethod: 'mpesa' | 'card' | 'bank_transfer',
+ *   paymentMethod: 'stripe' | 'bank_transfer',
  *   idempotencyKey?: string
  * }
  */
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
     }
     
     // Validate payment method
-    const validMethods = ['mpesa', 'card', 'bank_transfer'];
+    const validMethods = ['stripe', 'bank_transfer'];
     if (!validMethods.includes(paymentMethod)) {
       return res.status(400).json({
         code: 'INVALID_PAYMENT_METHOD',

@@ -53,7 +53,7 @@ describe('Payment Endpoints', () => {
         .send({
           feeId: 'fee-123',
           phoneNumber: '254712345678',
-          paymentMethod: 'mpesa',
+          paymentMethod: 'stripe',
           idempotencyKey: 'idem-123'
         });
 
@@ -96,7 +96,7 @@ describe('Payment Endpoints', () => {
         .send({
           feeId: 'fee-123',
           phoneNumber: '254712345678',
-          paymentMethod: 'mpesa'
+          paymentMethod: 'stripe'
         });
 
       expect(response.status).toBe(401);

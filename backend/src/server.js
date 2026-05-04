@@ -50,7 +50,7 @@ app.use('/api/audit', require('./routes/audit'));
 app.use('/api/analytics', require('./routes/analytics'));
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use((req, res) => {
   res.status(404).json({
     code: 'NOT_FOUND',
     message: 'Endpoint not found',

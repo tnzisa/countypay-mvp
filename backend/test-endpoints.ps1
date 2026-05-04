@@ -99,7 +99,7 @@ try {
     $paymentBody = @{
         feeId = $feeId
         phoneNumber = "254712345678"
-        paymentMethod = "mpesa"
+        paymentMethod = "stripe"
     } | ConvertTo-Json
 
     $payment = Invoke-RestMethod -Uri "$baseUrl/payments" `
