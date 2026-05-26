@@ -1,10 +1,12 @@
 /**
  * Global Error Handler Middleware
  * Catches all errors and formats them consistently
+ * Integrates with metrics for error tracking
  */
 
 const { ApiError, errorResponse, HTTP_STATUS_MAP } = require('../lib/errorUtils');
 const auditService = require('../services/auditService');
+const metrics = require('../lib/metrics');
 
 /**
  * Global error handler middleware
@@ -112,6 +114,13 @@ function errorHandler(err, req, res, next) {
       actorId: req.user?.userId
     }).catch(e => console.error('Failed to log audit:', e));
   }
+
+  // Record metrics
+  const route = req.route?.path || req.path;
+  metrics.errorCount.inc({
+    type: `http_${statusCode}`,
+    route
+  });
 
   // Send response
   res.status(statusCode).json(errorBody);

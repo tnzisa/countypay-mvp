@@ -5,6 +5,8 @@ require('dotenv').config();
 
 const { auditMiddleware } = require('./middleware/auditMiddleware');
 const { errorHandler } = require('./middleware/errorHandler');
+const metricsMiddleware = require('./middleware/metricsMiddleware');
+const { register: metricsRegister } = require('./lib/metrics');
 const cacheService = require('./services/cacheService');
 const {
   apiLimiter,
@@ -19,9 +21,50 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware);
 app.use(auditMiddleware);
 
-// Health check
+// Liveness probe (is service running)
+app.get('/health/live', (req, res) => {
+  res.status(200).json({ 
+    status: 'alive',
+    service: 'countypay-backend',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Readiness probe (is service ready to accept traffic)
+app.get('/health/ready', async (req, res) => {
+  try {
+    const cacheHealth = await cacheService.health();
+    
+    if (!cacheHealth) {
+      return res.status(503).json({
+        status: 'not_ready',
+        service: 'countypay-backend',
+        reason: 'cache_unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.status(200).json({
+      status: 'ready',
+      service: 'countypay-backend',
+      cache: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'not_ready',
+      service: 'countypay-backend',
+      reason: 'health_check_failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Health check (backwards compatibility)
 app.get('/health', async (req, res) => {
   const cacheHealth = await cacheService.health();
   res.json({
@@ -30,6 +73,12 @@ app.get('/health', async (req, res) => {
     cache: cacheHealth ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', metricsRegister.contentType);
+  res.end(await metricsRegister.metrics());
 });
 
 // Apply rate limiters to API routes
@@ -44,7 +93,6 @@ app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/payments', paymentLimiter, require('./routes/payments'));
 app.use('/api/counties', require('./routes/counties'));
-app.use('/api/blockchain', require('./routes/blockchain'));
 app.use('/api/audit/export', exportLimiter);
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/analytics', require('./routes/analytics'));

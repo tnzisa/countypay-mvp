@@ -141,7 +141,7 @@ export default function Dashboard() {
             {[
               ['1', 'Select your county', 'Choose from all 47 supported counties'],
               ['2', 'Pick a fee', 'Land rates, parking, permits, licenses'],
-              ['3', 'Pay securely', 'M-Pesa, USSD or card — your choice'],
+              ['3', 'Pay securely', 'Stripe card or bank transfer — your choice'],
               ['4', 'Get verified receipt', 'Instant blockchain-backed confirmation'],
             ].map(([n, title, desc]) => (
               <li key={n} className="flex gap-3">

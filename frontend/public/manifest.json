@@ -1,7 +1,7 @@
 {
   "name": "CountyPay - County Fee Payment",
   "short_name": "CountyPay",
-  "description": "Pay county fees quickly and securely using M-Pesa, USSD, or Card",
+  "description": "Pay county fees quickly and securely using Stripe card or bank transfer",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f9fafb",

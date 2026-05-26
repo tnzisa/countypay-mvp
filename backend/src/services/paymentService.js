@@ -12,7 +12,6 @@
 
 const { prisma } = require('../lib/prisma');
 const cacheService = require('./cacheService');
-const fabricService = require('./fabric');
 const auditService = require('./auditService');
 const fraudDetectionService = require('./fraudDetectionService');
 
@@ -234,17 +233,12 @@ async function processPayment(transactionId) {
       };
     }
 
-    // Record on blockchain
-    await recordOnBlockchain(transaction);
-
     // Update transaction to COMPLETED
     await prisma.transaction.update({
       where: { id: transactionId },
       data: {
         status: PAYMENT_STATUS.COMPLETED,
-        processedAt: new Date(),
-        blockchainTxId: paymentResult.blockchainTxId,
-        blockchainHash: paymentResult.blockchainHash
+        processedAt: new Date()
       }
     });
     
@@ -315,30 +309,6 @@ async function processWithProvider(provider, transaction) {
     ...result,
     provider
   };
-}
-
-/**
- * Record payment on blockchain
- * @param {Object} transaction - Transaction object
- */
-async function recordOnBlockchain(transaction) {
-  try {
-    const fabricResult = await fabricService.recordPayment({
-      paymentId: transaction.id,
-      transactionRef: transaction.transactionRef,
-      amount: transaction.amount,
-      countyCode: transaction.fee.county.code,
-      feeType: transaction.fee.name,
-      phoneNumber: transaction.phoneNumber,
-      status: 'COMPLETED'
-    });
-
-    console.log(`Recorded on blockchain: ${transaction.id}`);
-    return fabricResult;
-  } catch (error) {
-    console.error('Blockchain recording failed (payment still completed):', error);
-    // Don't throw - payment succeeded even if blockchain fails
-  }
 }
 
 /**
@@ -460,6 +430,5 @@ module.exports = {
   processPayment,
   retryPayment,
   getPaymentStatus,
-  getUserTransactions,
-  recordOnBlockchain
+  getUserTransactions
 };

@@ -92,7 +92,7 @@ export default function Register() {
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1.5">Phone number</label>
               <input id="phone" name="phone" type="tel" required value={formData.phone} onChange={handleChange} placeholder="0712 345 678" className={inputCls} />
-              <p className="mt-1.5 text-xs text-slate-400">Used for M-Pesa payments and account login</p>
+              <p className="mt-1.5 text-xs text-slate-400">Used for account login and payment verification</p>
             </div>
 
             <div>
